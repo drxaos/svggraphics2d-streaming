@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
+    <title></title>
+</head>
+<body>
+
+<section>
+    <svg class="image" width="100" height="100"></svg>
+    <pre id="log"></pre>
+</section>
+
+<script>
+    function log(msg) {
+        document.getElementById('log').appendChild(document.createTextNode(msg + "\n"));
+    }
+
+    var socket = new WebSocket("ws://" + location.host + "/stream");
+
+    socket.onopen = function () {
+        log("Соединение установлено.");
+        socket.send("s");
+    };
+
+    socket.onclose = function (event) {
+        if (event.wasClean) {
+            log('Соединение закрыто чисто');
+        } else {
+            log('Обрыв соединения');
+        }
+        log('Код: ' + event.code + ' причина: ' + event.reason);
+    };
+
+    window.DRAWER_READY = false;
+    setInterval(function () {
+        if (window.DRAWER_READY) {
+            socket.send("i");
+            window.DRAWER_READY = false;
+        }
+    }, 10);
+
+    socket.onmessage = function (event) {
+        if (typeof event.data == "string") {
+            if (event.data == "e") {
+                window.DRAWER_READY = true;
+
+            } else if (event.data.startsWith("d")) {
+                var d = event.data.replace("d", "").split('x');
+                $(".image").attr("width", d[0]);
+                $(".image").attr("height", d[1]);
+
+                window.DRAWER_READY = true;
+
+            } else {
+                $(".image").html(event.data);
+                window.DRAWER_READY = true;
+            }
+        }
+    };
+
+    socket.onerror = function (error) {
+        log("Ошибка " + error.message);
+    };
+
+
+</script>
+</body>
+</html>
